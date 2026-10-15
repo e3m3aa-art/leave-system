@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام استئذان الطلاب - ثانوية المملكة العالمية</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS for Excel integration -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f1f5f9;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col justify-between">
+
+    <div id="app" class="flex-grow">
+        <!-- Login View -->
+        <div id="loginView" class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 border border-slate-100">
+                <div class="text-center mb-6">
+                    <div id="loginLogoContainer" class="inline-flex items-center justify-center w-20 h-20 bg-teal-50 text-teal-700 rounded-2xl mb-3 shadow-inner overflow-hidden">
+                        <i class="fa-solid fa-graduation-cap text-4xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-slate-900">نظام استئذان الطلاب</h1>
+                    <p class="text-sm text-slate-500 mt-1">ثانوية المملكة العالمية</p>
+                </div>
+
+                <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">اختر اسم المستخدم / الإداري</label>
+                        <select id="loginUser" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none bg-slate-50">
+                            <!-- Populated Dynamically -->
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">كلمة المرور</label>
+                        <input type="password" id="loginPass" required placeholder="أدخل كلمة المرور" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none bg-slate-50">
+                    </div>
+
+                    <div id="loginError" class="hidden text-red-500 text-xs text-center font-medium bg-red-50 p-2 rounded-lg"></div>
+
+                    <button type="submit" class="w-full py-3 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-xl shadow-lg transition duration-200">
+                        تسجيل الدخول
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dashboard View -->
+        <div id="dashboardView" class="hidden min-h-screen flex flex-col">
+            <!-- Top Navbar -->
+            <header class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-30">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                    <div class="flex items-center space-x-3 space-x-reverse">
+                        <div id="headerLogoContainer" class="w-10 h-10 bg-teal-50 text-teal-700 rounded-lg flex items-center justify-center overflow-hidden">
+                            <i class="fa-solid fa-graduation-cap text-lg"></i>
+                        </div>
+                        <div>
+                            <span class="font-bold text-slate-900 block leading-tight">ثانوية المملكة العالمية</span>
+                            <span class="text-xs text-slate-500">نظام استئذان الطلاب</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3 space-x-reverse">
+                        <span id="currentUserDisplay" class="text-sm font-medium bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg"></span>
+                        <button id="adminNavBtn" onclick="toggleAdminModal()" class="hidden px-3 py-1.5 text-sm bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg font-medium transition">
+                            <i class="fa-solid fa-gear ml-1"></i> لوحة المسؤول
+                        </button>
+                        <button onclick="logout()" class="px-3 py-1.5 text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-medium transition">
+                            <i class="fa-solid fa-right-from-bracket ml-1"></i> خروج
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Workspace -->
+            <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
+                <!-- Navigation Tabs -->
+                <div class="flex space-x-2 space-x-reverse mb-6 border-b border-slate-200 pb-3">
+                    <button onclick="switchTab('newRequest')" id="tabBtn-newRequest" class="px-4 py-2 rounded-xl font-bold text-sm bg-teal-700 text-white shadow-sm transition">
+                        <i class="fa-solid fa-plus-circle ml-1"></i> استئذان جديد
+                    </button>
+                    <button onclick="switchTab('records')" id="tabBtn-records" class="px-4 py-2 rounded-xl font-bold text-sm bg-white text-slate-600 hover:bg-slate-100 transition">
+                        <i class="fa-solid fa-list-check ml-1"></i> سجل الاستئذان
+                    </button>
+                </div>
+
+                <!-- Tab 1: New Request Form -->
+                <div id="tab-newRequest" class="space-y-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                        
+                        <!-- Live Time/Date Display Header -->
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
+                            <h2 class="text-lg font-bold text-slate-800 flex items-center">
+                                <i class="fa-solid fa-file-lines text-teal-700 ml-2"></i> إصدار بطاقة استئذان طالب
+                            </h2>
+                            <div class="flex items-center space-x-2 space-x-reverse bg-teal-50 border border-teal-100 px-3.5 py-1.5 rounded-xl text-teal-800 text-xs font-semibold self-start sm:self-auto">
+                                <i class="fa-regular fa-clock text-teal-600"></i>
+                                <span id="liveClockDisplay">جاري تحضير الوقت والتاريخ...</span>
+                            </div>
+                        </div>
+
+                        <form id="requestForm" onsubmit="submitRequest(event)" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">اسم الطالب</label>
+                                <div class="relative">
+                                    <input type="text" id="studentName" list="studentsList" required placeholder="اكتب أو اختر اسم الطالب..." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none" oninput="onStudentNameInput(this.value)">
+                                    <datalist id="studentsList"></datalist>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">الصف / الفصل</label>
+                                <input type="text" id="studentGrade" required placeholder="مثال: ثالث ثانوي أ" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">تاريخ الاستئذان (تلقائي)</label>
+                                <input type="text" id="requestDate" readonly class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-teal-800 font-bold">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">وقت الاستئذان (تلقائي)</label>
+                                <input type="text" id="requestTime" readonly class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-teal-800 font-bold">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">سبب الاستئذان</label>
+                                <select id="leaveReason" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                                    <option value="">اختر السبب...</option>
+                                    <option value="ظرف خاص">ظرف خاص</option>
+                                    <option value="موعد مستشفى">موعد مستشفى</option>
+                                    <option value="مراجعة حكومية">مراجعة حكومية</option>
+                                    <option value="أخرى">أخرى</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">الإداري المعتمد</label>
+                                <input type="text" id="approvingAdmin" readonly class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-700 font-medium">
+                            </div>
+
+                            <div class="md:col-span-2 pt-4">
+                                <button type="submit" class="w-full py-3.5 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-xl shadow-lg transition duration-200 flex items-center justify-center">
+                                    <i class="fa-solid fa-print ml-2"></i> حفظ وطباعة بطاقة الاستئذان
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Records Log -->
+                <div id="tab-records" class="hidden space-y-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+                            <h2 class="text-lg font-bold text-slate-800 flex items-center">
+                                <i class="fa-solid fa-database text-teal-700 ml-2"></i> سجل الاستئذانات الصادرة
+                            </h2>
+                            <div class="flex items-center space-x-2 space-x-reverse w-full sm:w-auto">
+                                <button onclick="exportToExcel()" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl shadow-sm transition">
+                                    <i class="fa-solid fa-file-excel ml-1"></i> تصدير إلى Excel
+                                </button>
+                                <button onclick="printFullReport()" class="flex-1 sm:flex-none px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-sm font-medium rounded-xl shadow-sm transition">
+                                    <i class="fa-solid fa-print ml-1"></i> طباعة السجل (A4)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="w-full text-right border-collapse">
+                                <thead class="bg-slate-50 text-slate-700 text-xs font-bold uppercase border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-3">التاريخ</th>
+                                        <th class="p-3">الوقت</th>
+                                        <th class="p-3">اسم الطالب</th>
+                                        <th class="p-3">الصف</th>
+                                        <th class="p-3">السبب</th>
+                                        <th class="p-3">المعتمد</th>
+                                        <th class="p-3 text-center">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recordsTableBody" class="divide-y divide-slate-100 text-sm">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Admin Settings Modal -->
+        <div id="adminModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl p-6 border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <h3 class="text-lg font-bold text-slate-900"><i class="fa-solid fa-gear text-amber-600 ml-2"></i> لوحة إدارة النظام</h3>
+                    <button onclick="toggleAdminModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+                </div>
+                
+                <div class="space-y-4 text-sm">
+                    <!-- Excel Upload strictly placed inside Admin Panel -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300">
+                        <span class="font-semibold text-slate-700 block mb-1">ربط ملف بيانات الطلاب (Excel)</span>
+                        <span class="text-xs text-slate-500 block mb-3">رفع ملف الاكسل لتحديث أسماء الطلاب وصفوفهم في النظام</span>
+                        <label class="cursor-pointer inline-flex items-center bg-white border border-slate-300 hover:bg-slate-100 px-4 py-2 rounded-xl text-sm font-medium shadow-sm transition">
+                            <i class="fa-solid fa-upload ml-1 text-teal-700"></i> اختيار ملف Excel
+                            <input type="file" id="excelFile" accept=".xlsx, .xls" onchange="handleExcelUpload(event)" class="hidden">
+                        </label>
+                    </div>
+
+                    <div>
+                        <label class="font-semibold text-slate-700 block mb-1">تعديل كلمة مرور المسؤول الرئيسي (Admin)</label>
+                        <div class="flex gap-2">
+                            <input type="password" id="newAdminPass" placeholder="كلمة المرور الجديدة" class="flex-grow px-3 py-2 border rounded-xl">
+                            <button onclick="updateAdminPassword()" class="px-4 py-2 bg-slate-800 text-white font-medium rounded-xl hover:bg-slate-900">حفظ</button>
+                        </div>
+                    </div>
+
+                    <div class="border-t pt-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-semibold text-slate-700">إدارة أسماء وكلمات مرور الإداريين</span>
+                            <button onclick="addNewAdminRow()" class="text-xs bg-teal-50 text-teal-700 hover:bg-teal-100 px-2.5 py-1 rounded-lg font-bold">
+                                <i class="fa-solid fa-plus ml-1"></i> إضافة إداري جديد
+                            </button>
+                        </div>
+                        <div id="adminsListContainer" class="space-y-3">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t pt-4 flex justify-end">
+                    <button onclick="toggleAdminModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // رابط الويب الخاص بقاعدة بيانات Google Sheets الخاصة بك:
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQHfm6XxMBS16xJycoU2C-tcZMyUFXRQSsbMmBRai9fqiOpG0qLS_DcwYZoryWsBcPfg/exec";
+
+        // Default Passwords Mapping
+        const DEFAULT_PASSWORDS = {
+            "Admin": "371407",
+            "عبدالهادي آل سلطان": "1230",
+            "عبدالرحمن آل حصوصه": "1212",
+            "محمد الفرشان": "1111",
+            "غازي البقمي": "1010",
+            "عبدالرحمن الشهري": "0909"
+        };
+
+        let adminsPasswords = JSON.parse(localStorage.getItem("admins_passwords")) || DEFAULT_PASSWORDS;
+        let currentUser = localStorage.getItem("current_user") || null;
+        let studentsDatabase = JSON.parse(localStorage.getItem("students_db")) || [];
+        let requestsRecords = JSON.parse(localStorage.getItem("requests_records")) || [];
+        
+        // شعار المدرسة الثابت ككود Base64 نقي وبسطر واحد
+        const DEFAULT_LOGO_BASE64 = "data:image/jpeg;base64,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";
+
+        function updateAppLogoDisplays() {
+            const loginContainer = document.getElementById("loginLogoContainer");
+            const headerContainer = document.getElementById("headerLogoContainer");
+
+            const imgHtml = `<img src="${DEFAULT_LOGO_BASE64}" alt="Logo" class="w-full h-full object-contain p-1">`;
+            if (loginContainer) loginContainer.innerHTML = imgHtml;
+            if (headerContainer) headerContainer.innerHTML = imgHtml;
+        }
+
+        function renderLoginUsersList() {
+            const select = document.getElementById("loginUser");
+            select.innerHTML = '<option value="">اختر اسم المستخدم...</option>';
+            Object.keys(adminsPasswords).forEach(user => {
+                const opt = document.createElement("option");
+                opt.value = user;
+                opt.textContent = user === "Admin" ? "المسؤول (Admin)" : user;
+                select.appendChild(opt);
+            });
+        }
+
+        // Real-time Clock & Automatic Live Date/Time Population
+        function startLiveClock() {
+            function updateClock() {
+                const now = new Date();
+                const dateOptions = { year: 'numeric', month: 'numeric', day: 'numeric' };
+                const fullOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+
+                const formattedFull = now.toLocaleDateString('ar-SA', fullOptions);
+                const clockEl = document.getElementById("liveClockDisplay");
+                if (clockEl) {
+                    clockEl.textContent = formattedFull;
+                }
+
+                // Automatically populate inputs live
+                const dateInput = document.getElementById("requestDate");
+                const timeInput = document.getElementById("requestTime");
+                if (dateInput) {
+                    dateInput.value = now.toLocaleDateString('ar-SA', dateOptions);
+                }
+                if (timeInput) {
+                    timeInput.value = now.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', hour12: true });
+                }
+            }
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById("loginUser").value;
+            const pass = document.getElementById("loginPass").value;
+            const errDiv = document.getElementById("loginError");
+
+            if (adminsPasswords[user] && adminsPasswords[user] === pass) {
+                currentUser = user;
+                localStorage.setItem("current_user", currentUser);
+                showDashboard();
+            } else {
+                errDiv.textContent = "اسم المستخدم أو كلمة المرور غير صحيحة!";
+                errDiv.classList.remove("hidden");
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem("current_user");
+            document.getElementById("loginPass").value = "";
+            document.getElementById("loginUser").value = "";
+            showLogin();
+        }
+
+        function showLogin() {
+            renderLoginUsersList();
+            updateAppLogoDisplays();
+            document.getElementById("loginView").classList.remove("hidden");
+            document.getElementById("dashboardView").classList.add("hidden");
+        }
+
+        function showDashboard() {
+            document.getElementById("loginView").classList.add("hidden");
+            document.getElementById("dashboardView").classList.remove("hidden");
+            document.getElementById("currentUserDisplay").textContent = `المستخدم: ${currentUser}`;
+            
+            // Auto-lock approving admin
+            document.getElementById("approvingAdmin").value = currentUser;
+
+            if (currentUser === "Admin") {
+                document.getElementById("adminNavBtn").classList.remove("hidden");
+            } else {
+                document.getElementById("adminNavBtn").classList.add("hidden");
+            }
+
+            updateAppLogoDisplays();
+            updateStudentsDatalist();
+            renderRecords();
+            renderAdminsSettings();
+            startLiveClock();
+            fetchCloudData(); // جلب البيانات السحابية فور الدخول
+        }
+
+        function switchTab(tabId) {
+            document.getElementById("tab-newRequest").classList.add("hidden");
+            document.getElementById("tab-records").classList.add("hidden");
+            document.getElementById("tabBtn-newRequest").className = "px-4 py-2 rounded-xl font-bold text-sm bg-white text-slate-600 hover:bg-slate-100 transition";
+            document.getElementById("tabBtn-records").className = "px-4 py-2 rounded-xl font-bold text-sm bg-white text-slate-600 hover:bg-slate-100 transition";
+
+            document.getElementById(`tab-${tabId}`).classList.remove("hidden");
+            document.getElementById(`tabBtn-${tabId}`).className = "px-4 py-2 rounded-xl font-bold text-sm bg-teal-700 text-white shadow-sm transition";
+
+            if (tabId === 'records') {
+                fetchCloudData();
+                renderRecords();
+            }
+        }
+
+        function handleExcelUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                
+                studentsDatabase = [];
+                for (let i = 1; i < json.length; i++) {
+                    const row = json[i];
+                    if (row && row.length > 0) {
+                        const name = row[0] ? String(row[0]).trim() : "";
+                        const grade = row[1] ? String(row[1]).trim() : "";
+                        if (name) {
+                            studentsDatabase.push({name, grade});
+                        }
+                    }
+                }
+                localStorage.setItem("students_db", JSON.stringify(studentsDatabase));
+                updateStudentsDatalist();
+                alert(`تم استيراد ${studentsDatabase.length} طالب بنجاح!`);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function updateStudentsDatalist() {
+            const list = document.getElementById("studentsList");
+            list.innerHTML = "";
+            studentsDatabase.forEach(st => {
+                const opt = document.createElement("option");
+                opt.value = st.name;
+                opt.textContent = st.grade ? `الصف: ${st.grade}` : '';
+                list.appendChild(opt);
+            });
+        }
+
+        function onStudentNameInput(val) {
+            const found = studentsDatabase.find(st => st.name === val.trim());
+            if (found && found.grade) {
+                document.getElementById("studentGrade").value = found.grade;
+            }
+        }
+
+        function openPrintWindow(contentHtml, pageSizeCss) {
+            const printWin = window.open('', '_blank', 'width=900,height=700');
+            if (!printWin) {
+                alert("يرجى السماح بالنوافذ المنبثقة للطباعة المباشرة.");
+                return;
+            }
+            printWin.document.write(`
+                <!DOCTYPE html>
+                <html lang="ar" dir="rtl">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>طباعة</title>
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+                    <style>
+                        @page { ${pageSizeCss} margin: 0; }
+                        body { margin: 0; padding: 0; background: white; font-family: 'Cairo', sans-serif; }
+                    </style>
+                </head>
+                <body>
+                    ${contentHtml}
+                    <script>
+                        window.onload = function() {
+                            window.focus();
+                            window.print();
+                            setTimeout(function(){ window.close(); }, 500);
+                        }
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWin.document.close();
+        }
+
+        async function submitRequest(e) {
+            e.preventDefault();
+            const now = new Date();
+            const record = {
+                id: Date.now(),
+                requestDate: document.getElementById("requestDate").value || now.toLocaleDateString('ar-SA'),
+                requestTime: document.getElementById("requestTime").value || now.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', hour12: true }),
+                studentName: document.getElementById("studentName").value.trim(),
+                studentGrade: document.getElementById("studentGrade").value.trim(),
+                leaveReason: document.getElementById("leaveReason").value,
+                approvingAdmin: document.getElementById("approvingAdmin").value
+            };
+
+            requestsRecords.unshift(record);
+            localStorage.setItem("requests_records", JSON.stringify(requestsRecords));
+            
+            // إرسال البيانات بشكل آمن إلى Google Sheets سحابياً
+            if (GOOGLE_SCRIPT_URL) {
+                try {
+                    await fetch(GOOGLE_SCRIPT_URL, {
+                        method: "POST",
+                        body: JSON.stringify({
+                            action: "addPermission",
+                            data: {
+                                id: record.id,
+                                studentName: record.studentName,
+                                class: record.studentGrade,
+                                reason: record.leaveReason,
+                                date: record.requestDate,
+                                time: record.requestTime,
+                                approvedBy: record.approvingAdmin
+                            }
+                        })
+                    });
+                } catch (err) {
+                    console.log("فشل الحفظ السحابي المؤقت، تم الحفظ محلياً:", err);
+                }
+            }
+
+            // Execute Guaranteed Popup Print
+            printA6Card(record);
+
+            document.getElementById("requestForm").reset();
+            document.getElementById("approvingAdmin").value = currentUser;
+        }
+
+        function printA6Card(rec) {
+            const dateStr = rec.requestDate || (rec.date ? rec.date.split(' ')[0] : '');
+            const timeStr = rec.requestTime || (rec.date ? rec.date.split(' ').slice(1).join(' ') : '');
+
+            const logoHeaderHtml = `<div style="text-align: center; margin-bottom: 4px;"><img src="${DEFAULT_LOGO_BASE64}" style="max-height: 48px; max-width: 100px; object-fit: contain;"></div>`;
+
+            const cardHTML = `
+                <div style="width: 10.5cm; height: 14.8cm; margin: 0 auto; padding: 6mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; direction: rtl; background: #ffffff; font-family: 'Cairo', sans-serif; border: 2px solid #0f766e; border-radius: 8px; position: relative;">
+                    <div style="border: 1px solid #cbd5e1; height: 100%; width: 100%; box-sizing: border-box; padding: 5mm; display: flex; flex-direction: column; justify-content: space-between; border-radius: 6px; background: #fafafa;">
+                        
+                        <div style="text-align: center; border-bottom: 2px solid #0f766e; padding-bottom: 6px;">
+                            ${logoHeaderHtml}
+                            <div style="font-size: 14px; font-weight: 900; color: #0f766e;">ثانوية المملكة العالمية</div>
+                            <div style="font-size: 11px; font-weight: 700; color: #334155; margin-top: 2px;">بطاقة استئذان خروج طالب</div>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: #1e293b;">
+                            <div style="background: #ffffff; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <span style="font-weight: bold; color: #0f766e; display: inline-block; width: 22%;">اسم الطالب:</span>
+                                <span style="font-weight: 700;">${rec.studentName}</span>
+                            </div>
+                            <div style="background: #ffffff; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <span style="font-weight: bold; color: #0f766e; display: inline-block; width: 22%;">الصف/الفصل:</span>
+                                <span style="font-weight: 700;">${rec.studentGrade}</span>
+                            </div>
+                            <div style="background: #ffffff; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <span style="font-weight: bold; color: #0f766e; display: inline-block; width: 22%;">سبب الخروج:</span>
+                                <span style="font-weight: 700;">${rec.leaveReason}</span>
+                            </div>
+                            <div style="display: flex; gap: 6px;">
+                                <div style="flex: 1; background: #ffffff; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center;">
+                                    <div style="font-size: 10px; color: #64748b;">التاريخ</div>
+                                    <div style="font-weight: 700; font-size: 11px;">${dateStr}</div>
+                                </div>
+                                <div style="flex: 1; background: #ffffff; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center;">
+                                    <div style="font-size: 10px; color: #64748b;">وقت الاستئذان</div>
+                                    <div style="font-weight: 700; font-size: 11px;">${timeStr}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="border-top: 1px dashed #cbd5e1; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                            <div>
+                                <span style="color: #64748b;">المسؤول المعتمد:</span> 
+                                <span style="font-weight: bold; color: #0f766e;">${rec.approvingAdmin}</span>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 9px; color: #94a3b8;">ختم المدرسة</div>
+                                <div style="width: 50px; height: 20px; border-bottom: 1px solid #cbd5e1; margin: 0 auto;"></div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            `;
+            openPrintWindow(cardHTML, "size: A6 portrait;");
+        }
+
+        function renderRecords() {
+            const tbody = document.getElementById("recordsTableBody");
+            tbody.innerHTML = "";
+            if (requestsRecords.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center p-6 text-slate-400">لا توجد سجلات استئذان حتى الآن</td></tr>`;
+                return;
+            }
+            requestsRecords.forEach((rec, idx) => {
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="p-3 font-medium text-slate-600">${rec.requestDate || (rec.date ? rec.date.split(' ')[0] : '')}</td>
+                    <td class="p-3 text-slate-600">${rec.requestTime || (rec.date ? rec.date.split(' ').slice(1).join(' ') : '')}</td>
+                    <td class="p-3 font-bold text-slate-800">${rec.studentName}</td>
+                    <td class="p-3 text-slate-600">${rec.studentGrade || rec.class}</td>
+                    <td class="p-3 text-slate-600">${rec.leaveReason || rec.reason}</td>
+                    <td class="p-3 font-semibold text-teal-700">${rec.approvingAdmin || rec.approvedBy}</td>
+                    <td class="p-3 text-center space-x-1 space-x-reverse">
+                        <button onclick='printA6Card(${JSON.stringify(rec)})' class="px-2.5 py-1 bg-teal-50 text-teal-700 hover:bg-teal-100 rounded-lg text-xs font-bold transition" title="إعادة طباعة البطاقة">
+                            <i class="fa-solid fa-print"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function toggleAdminModal() {
+            const modal = document.getElementById("adminModal");
+            modal.classList.toggle("hidden");
+            if (!modal.classList.contains("hidden")) {
+                renderAdminsSettings();
+            }
+        }
+
+        function renderAdminsSettings() {
+            const container = document.getElementById("adminsListContainer");
+            container.innerHTML = "";
+            Object.keys(adminsPasswords).forEach(user => {
+                if (user === "Admin") return; // Admin الرئيسي له خانة مخصصة
+                const div = document.createElement("div");
+                div.className = "flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200";
+                div.innerHTML = `
+                    <input type="text" value="${user}" id="admin_name_${user}" class="flex-grow px-3 py-1.5 border rounded-lg bg-white text-sm" placeholder="اسم الإداري">
+                    <input type="text" value="${adminsPasswords[user]}" id="admin_pass_${user}" class="w-28 px-3 py-1.5 border rounded-lg bg-white text-sm" placeholder="كلمة المرور">
+                    <button onclick="saveAdminChanges('${user}')" class="px-3 py-1.5 bg-teal-700 text-white rounded-lg text-xs font-bold hover:bg-teal-800">تحديث</button>
+                    <button onclick="deleteAdminUser('${user}')" class="px-2 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs" title="حذف">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function addNewAdminRow() {
+            const name = prompt("أدخل اسم الإداري الجديد:");
+            if (!name) return;
+            const pass = prompt("أدخل كلمة المرور للإداري الجديد:");
+            if (!pass) return;
+            adminsPasswords[name] = pass;
+            localStorage.setItem("admins_passwords", JSON.stringify(adminsPasswords));
+            renderAdminsSettings();
+            renderLoginUsersList();
+            alert("تم إضافة الإداري بنجاح!");
+        }
+
+        function saveAdminChanges(oldName) {
+            const newName = document.getElementById(`admin_name_${oldName}`).value.trim();
+            const newPass = document.getElementById(`admin_pass_${oldName}`).value.trim();
+            if (!newName || !newPass) {
+                alert("الرجاء إدخال الاسم وكلمة المرور!");
+                return;
+            }
+            if (newName !== oldName) {
+                delete adminsPasswords[oldName];
+            }
+            adminsPasswords[newName] = newPass;
+            localStorage.setItem("admins_passwords", JSON.stringify(adminsPasswords));
+            renderAdminsSettings();
+            renderLoginUsersList();
+            alert("تم تحديث بيانات الإداري بنجاح!");
+        }
+
+        function deleteAdminUser(username) {
+            if (confirm(`هل أنت متأكد من حذف الإداري (${username})؟`)) {
+                delete adminsPasswords[username];
+                localStorage.setItem("admins_passwords", JSON.stringify(adminsPasswords));
+                renderAdminsSettings();
+                renderLoginUsersList();
+            }
+        }
+
+        function updateAdminPassword() {
+            const newPass = document.getElementById("newAdminPass").value.trim();
+            if (!newPass) {
+                alert("الرجاء إدخال كلمة المرور الجديدة للمسؤول!");
+                return;
+            }
+            adminsPasswords["Admin"] = newPass;
+            localStorage.setItem("admins_passwords", JSON.stringify(adminsPasswords));
+            document.getElementById("newAdminPass").value = "";
+            alert("تم تحديث كلمة مرور المسؤول الرئيسي بنجاح!");
+        }
+
+        function exportToExcel() {
+            const dataToExport = requestsRecords.map(r => ({
+                "التاريخ": r.requestDate || '',
+                "الوقت": r.requestTime || '',
+                "اسم الطالب": r.studentName || '',
+                "الصف": r.studentGrade || r.class || '',
+                "سبب الاستئذان": r.leaveReason || r.reason || '',
+                "المسؤول المعتمد": r.approvingAdmin || r.approvedBy || ''
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "سجل الاستئذان");
+            XLSX.writeFile(workbook, "سجل_استئذان_الطلاب.xlsx");
+        }
+
+        function printFullReport() {
+            let rowsHtml = "";
+            requestsRecords.forEach(r => {
+                rowsHtml += `
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1;">${r.requestDate || ''}</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1;">${r.requestTime || ''}</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">${r.studentName}</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1;">${r.studentGrade || r.class || ''}</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1;">${r.leaveReason || r.reason || ''}</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1;">${r.approvingAdmin || r.approvedBy || ''}</td>
+                    </tr>
+                `;
+            });
+
+            const reportHtml = `
+                <div style="padding: 15mm; direction: rtl; font-family: 'Cairo', sans-serif;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <h2 style="margin: 0; font-size: 18px; color: #0f766e;">ثانوية المملكة العالمية</h2>
+                        <h3 style="margin: 5px 0 0 0; font-size: 14px; color: #334155;">تقرير سجل استئذان الطلاب الشامل</h3>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: right;">
+                        <thead>
+                            <tr style="background: #f1f5f9; color: #334155;">
+                                <th style="padding: 8px; border: 1px solid #cbd5e1;">التاريخ</th>
+                                <th style="padding: 8px; border: 1px solid #cbd5e1;">الوقت</th>
+                                <th style="padding: 8px; border: 1px solid #cbd5e1;">اسم الطالب</th>
+                                <th style="padding: 8px; border: 1px solid #cbd5e1;">الصف</th>
+                                <th style="padding: 8px; border: 1px solid #cbd5e1;">السبب</th>
+                                <th style="padding: 8px; border: 1px solid #cbd5e1;">المعتمد</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            openPrintWindow(reportHtml, "size: A4 portrait;");
+        }
+
+        window.onload = function() {
+            renderLoginUsersList();
+            updateAppLogoDisplays();
+        };
+    </script>
+</body>
+</html>
