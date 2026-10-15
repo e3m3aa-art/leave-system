@@ -263,8 +263,8 @@
         let studentsDatabase = JSON.parse(localStorage.getItem("students_db")) || [];
         let requestsRecords = JSON.parse(localStorage.getItem("requests_records")) || [];
         
-        // شعار المدرسة كرابط مباشر مستقر ومضمون للعمل عبر الإنترنت والطباعة
-        const SCHOOL_LOGO_URL = "https://i.imgur.com/7gH1Q9K.png"; // يمكنك استبداله بأي رابط صورة مباشر لشعاركم
+        // كود صورة الشعار المباشرة والمدمجة بصيغة Base64 تم حزمها وتصفيتها في سطر واحد لتجنب أخطاء المتصفح
+        const EMBEDDED_LOGO = "data:image/jpeg;base64,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";
 
         // دالة لجلب البيانات سحابياً من Google Sheets عند بدء التشغيل
         async function fetchCloudData() {
@@ -316,7 +316,7 @@
             const loginContainer = document.getElementById("loginLogoContainer");
             const headerContainer = document.getElementById("headerLogoContainer");
 
-            const imgHtml = `<img src="${SCHOOL_LOGO_URL}" alt="Logo" class="w-full h-full object-contain p-1" onerror="this.onerror=null;this.src='https://via.placeholder.com/150';">`;
+            const imgHtml = `<img src="${EMBEDDED_LOGO}" alt="Logo" class="w-full h-full object-contain p-1">`;
             if (loginContainer) loginContainer.innerHTML = imgHtml;
             if (headerContainer) headerContainer.innerHTML = imgHtml;
         }
@@ -558,7 +558,7 @@
             const dateStr = rec.requestDate || (rec.date ? rec.date.split(' ')[0] : '');
             const timeStr = rec.requestTime || (rec.date ? rec.date.split(' ').slice(1).join(' ') : '');
 
-            const logoHeaderHtml = `<div style="text-align: center; margin-bottom: 4px;"><img src="${SCHOOL_LOGO_URL}" style="max-height: 48px; max-width: 100px; object-fit: contain;"></div>`;
+            const logoHeaderHtml = `<div style="text-align: center; margin-bottom: 4px;"><img src="${EMBEDDED_LOGO}" style="max-height: 48px; max-width: 100px; object-fit: contain;"></div>`;
 
             const cardHTML = `
                 <div style="width: 10.5cm; height: 14.8cm; margin: 0 auto; padding: 6mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; direction: rtl; background: #ffffff; font-family: 'Cairo', sans-serif; border: 2px solid #0f766e; border-radius: 8px; position: relative;">
