@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام استئذان الطلاب - ثانوية المملكة العالمية</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS for Excel integration -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f1f5f9;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col justify-between">
+
+    <div id="app" class="flex-grow">
+        <!-- Login View -->
+        <div id="loginView" class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 border border-slate-100">
+                <div class="text-center mb-6">
+                    <div id="loginLogoContainer" class="inline-flex items-center justify-center w-20 h-20 bg-teal-50 text-teal-700 rounded-2xl mb-3 shadow-inner overflow-hidden">
+                        <i class="fa-solid fa-graduation-cap text-4xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-slate-900">نظام استئذان الطلاب</h1>
+                    <p class="text-sm text-slate-500 mt-1">ثانوية المملكة العالمية</p>
+                </div>
+
+                <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">اختر اسم المستخدم / الإداري</label>
+                        <select id="loginUser" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none bg-slate-50">
+                            <!-- Populated Dynamically -->
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">كلمة المرور</label>
+                        <input type="password" id="loginPass" required placeholder="أدخل كلمة المرور" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none bg-slate-50">
+                    </div>
+
+                    <div id="loginError" class="hidden text-red-500 text-xs text-center font-medium bg-red-50 p-2 rounded-lg"></div>
+
+                    <button type="submit" class="w-full py-3 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-xl shadow-lg transition duration-200">
+                        تسجيل الدخول
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dashboard View -->
+        <div id="dashboardView" class="hidden min-h-screen flex flex-col">
+            <!-- Top Navbar -->
+            <header class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-30">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                    <div class="flex items-center space-x-3 space-x-reverse">
+                        <div id="headerLogoContainer" class="w-10 h-10 bg-teal-50 text-teal-700 rounded-lg flex items-center justify-center overflow-hidden">
+                            <i class="fa-solid fa-graduation-cap text-lg"></i>
+                        </div>
+                        <div>
+                            <span class="font-bold text-slate-900 block leading-tight">ثانوية المملكة العالمية</span>
+                            <span class="text-xs text-slate-500">نظام استئذان الطلاب</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3 space-x-reverse">
+                        <span id="currentUserDisplay" class="text-sm font-medium bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg"></span>
+                        <button id="adminNavBtn" onclick="toggleAdminModal()" class="hidden px-3 py-1.5 text-sm bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg font-medium transition">
+                            <i class="fa-solid fa-gear ml-1"></i> لوحة المسؤول
+                        </button>
+                        <button onclick="logout()" class="px-3 py-1.5 text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-medium transition">
+                            <i class="fa-solid fa-right-from-bracket ml-1"></i> خروج
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Workspace -->
+            <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
+                <!-- Navigation Tabs -->
+                <div class="flex space-x-2 space-x-reverse mb-6 border-b border-slate-200 pb-3">
+                    <button onclick="switchTab('newRequest')" id="tabBtn-newRequest" class="px-4 py-2 rounded-xl font-bold text-sm bg-teal-700 text-white shadow-sm transition">
+                        <i class="fa-solid fa-plus-circle ml-1"></i> استئذان جديد
+                    </button>
+                    <button onclick="switchTab('records')" id="tabBtn-records" class="px-4 py-2 rounded-xl font-bold text-sm bg-white text-slate-600 hover:bg-slate-100 transition">
+                        <i class="fa-solid fa-list-check ml-1"></i> سجل الاستئذان
+                    </button>
+                </div>
+
+                <!-- Tab 1: New Request Form -->
+                <div id="tab-newRequest" class="space-y-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                        
+                        <!-- Live Time/Date Display Header -->
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
+                            <h2 class="text-lg font-bold text-slate-800 flex items-center">
+                                <i class="fa-solid fa-file-lines text-teal-700 ml-2"></i> إصدار بطاقة استئذان طالب
+                            </h2>
+                            <div class="flex items-center space-x-2 space-x-reverse bg-teal-50 border border-teal-100 px-3.5 py-1.5 rounded-xl text-teal-800 text-xs font-semibold self-start sm:self-auto">
+                                <i class="fa-regular fa-clock text-teal-600"></i>
+                                <span id="liveClockDisplay">جاري تحضير الوقت والتاريخ...</span>
+                            </div>
+                        </div>
+
+                        <form id="requestForm" onsubmit="submitRequest(event)" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">اسم الطالب</label>
+                                <div class="relative">
+                                    <input type="text" id="studentName" list="studentsList" required placeholder="اكتب أو اختر اسم الطالب..." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none" oninput="onStudentNameInput(this.value)">
+                                    <datalist id="studentsList"></datalist>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">الصف / الفصل</label>
+                                <input type="text" id="studentGrade" required placeholder="مثال: ثالث ثانوي أ" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">تاريخ الاستئذان (تلقائي)</label>
+                                <input type="text" id="requestDate" readonly class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-teal-800 font-bold">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">وقت الاستئذان (تلقائي)</label>
+                                <input type="text" id="requestTime" readonly class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-teal-800 font-bold">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">سبب الاستئذان</label>
+                                <select id="leaveReason" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                                    <option value="">اختر السبب...</option>
+                                    <option value="ظرف خاص">ظرف خاص</option>
+                                    <option value="موعد مستشفى">موعد مستشفى</option>
+                                    <option value="مراجعة حكومية">مراجعة حكومية</option>
+                                    <option value="أخرى">أخرى</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">الإداري المعتمد</label>
+                                <input type="text" id="approvingAdmin" readonly class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-700 font-medium">
+                            </div>
+
+                            <div class="md:col-span-2 pt-4">
+                                <button type="submit" class="w-full py-3.5 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-xl shadow-lg transition duration-200 flex items-center justify-center">
+                                    <i class="fa-solid fa-print ml-2"></i> حفظ وطباعة بطاقة الاستئذان
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Records Log -->
+                <div id="tab-records" class="hidden space-y-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+                            <h2 class="text-lg font-bold text-slate-800 flex items-center">
+                                <i class="fa-solid fa-database text-teal-700 ml-2"></i> سجل الاستئذانات الصادرة
+                            </h2>
+                            <div class="flex items-center space-x-2 space-x-reverse w-full sm:w-auto">
+                                <button onclick="exportToExcel()" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl shadow-sm transition">
+                                    <i class="fa-solid fa-file-excel ml-1"></i> تصدير إلى Excel
+                                </button>
+                                <button onclick="printFullReport()" class="flex-1 sm:flex-none px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-sm font-medium rounded-xl shadow-sm transition">
+                                    <i class="fa-solid fa-print ml-1"></i> طباعة السجل (A4)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="w-full text-right border-collapse">
+                                <thead class="bg-slate-50 text-slate-700 text-xs font-bold uppercase border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-3">التاريخ</th>
+                                        <th class="p-3">الوقت</th>
+                                        <th class="p-3">اسم الطالب</th>
+                                        <th class="p-3">الصف</th>
+                                        <th class="p-3">السبب</th>
+                                        <th class="p-3">المعتمد</th>
+                                        <th class="p-3 text-center">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recordsTableBody" class="divide-y divide-slate-100 text-sm">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Admin Settings Modal -->
+        <div id="adminModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl p-6 border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <h3 class="text-lg font-bold text-slate-900"><i class="fa-solid fa-gear text-amber-600 ml-2"></i> لوحة إدارة النظام</h3>
+                    <button onclick="toggleAdminModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+                </div>
+                
+                <div class="space-y-4 text-sm">
+                    <!-- Excel Upload strictly placed inside Admin Panel -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300">
+                        <span class="font-semibold text-slate-700 block mb-1">ربط ملف بيانات الطلاب (Excel)</span>
+                        <span class="text-xs text-slate-500 block mb-3">رفع ملف الاكسل لتحديث أسماء الطلاب وصفوفهم في النظام</span>
+                        <label class="cursor-pointer inline-flex items-center bg-white border border-slate-300 hover:bg-slate-100 px-4 py-2 rounded-xl text-sm font-medium shadow-sm transition">
+                            <i class="fa-solid fa-upload ml-1 text-teal-700"></i> اختيار ملف Excel
+                            <input type="file" id="excelFile" accept=".xlsx, .xls" onchange="handleExcelUpload(event)" class="hidden">
+                        </label>
+                    </div>
+
+                    <div>
+                        <label class="font-semibold text-slate-700 block mb-1">تعديل كلمة مرور المسؤول الرئيسي (Admin)</label>
+                        <div class="flex gap-2">
+                            <input type="password" id="newAdminPass" placeholder="كلمة المرور الجديدة" class="flex-grow px-3 py-2 border rounded-xl">
+                            <button onclick="updateAdminPassword()" class="px-4 py-2 bg-slate-800 text-white font-medium rounded-xl hover:bg-slate-900">حفظ</button>
+                        </div>
+                    </div>
+
+                    <div class="border-t pt-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-semibold text-slate-700">إدارة أسماء وكلمات مرور الإداريين</span>
+                            <button onclick="addNewAdminRow()" class="text-xs bg-teal-50 text-teal-700 hover:bg-teal-100 px-2.5 py-1 rounded-lg font-bold">
+                                <i class="fa-solid fa-plus ml-1"></i> إضافة إداري جديد
+                            </button>
+                        </div>
+                        <div id="adminsListContainer" class="space-y-3">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t pt-4 flex justify-end">
+                    <button onclick="toggleAdminModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // رابط الويب الخاص بقاعدة بيانات Google Sheets الخاصة بك:
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQHfm6XxMBS16xJycoU2C-tcZMyUFXRQSsbMmBRai9fqiOpG0qLS_DcwYZoryWsBcPfg/exec";
+
+        // Default Passwords Mapping
+        const DEFAULT_PASSWORDS = {
+            "Admin": "371407",
+            "عبدالهادي آل سلطان": "1230",
+            "عبدالرحمن آل حصوصه": "1212",
+            "محمد الفرشان": "1111",
+            "غازي البقمي": "1010",
+            "عبدالرحمن الشهري": "0909"
+        };
+
+        let adminsPasswords = JSON.parse(localStorage.getItem("admins_passwords")) || DEFAULT_PASSWORDS;
+        let currentUser = localStorage.getItem("current_user") || null;
+        let studentsDatabase = JSON.parse(localStorage.getItem("students_db")) || [];
+        let requestsRecords = JSON.parse(localStorage.getItem("requests_records")) || [];
+        
+        // شعار المدرسة الثابت ككود Base64 دائم
+        let customSchoolLogo = "data:image/jpeg;base64,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NCavpOvTyyV8Mn5nJjv4qCiiivTPPCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigArzX45291P8ADW5a3UlLe4jllwP4M4P6kV6VRQB8d+AvGF14K8Uw6hEHa1k/dXUQP34z/Uda+zLG+ttSs4buynSa3mQPG6HIP8A9avE/jL8KbO0tLrxZoCeQ6fvrq2UfKwPJZfT1xXn/wAPvitq/giZLeRnvtJLYe1diNo/vIe306UAe8/GrxDd+HPhtfXNmxSa4dLZXA+7vOM/pn8a8V+D/AMMbfxnd3Go6sCNLtGw8fTzX7jPYCvdviHpdr8TPhrPJpO2a58n7ZYPn5jIBwB9cgVz3wD0m50jwTf3d3G0f2m43JvGMqoxn880Aep6fYW2m2UNpYwJBbQoESNBhVAqO40qwu9Qtb+5tIZbu0LG3mdATGWGCR6cVbqK5uIbS2lubiRYoYkLu7HhVAySaAPFvgh/yNuv/wDXBP8A0Jr6Tr5u/Z/R7nxbrN7GjfZha+WshHAZnBC/XA/SvpN69PLJXwyfmcmO/ioKKKK9M88KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiobq6gsrWa6upkhghQyPI5wqKBkkk9BQB5B8ZPi3D4dtZ9B0SffqsylJpUPEKnqM9z/n6/NHhm21e48S2NtoSSnUJZg0TRZ3IwOdx/wBnrxXY+P8AxzJ428UTX8e+KyizHawMfuR56nHc9a9m+Cfw7XwppP8AbOoQ7dSu4wIgw5hjwD/30eaAPU9Js7iy0q2tbq8kvbiKNVe4kADSHHJOO5q5RRQAUUUUAeB/G7wFrV94ktPEWk2kt5C8SQyrCpZomUnnHcHNdH8EvH3iDVb+Xw1rFk90ttAzxXpG3y1BHysevryfWvd6KACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooorE8UeJ7HwrpLX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fyLX5xFaklmJ45z0oA+oKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAOC+IHxR0rwVbPErpcalcIdkaH7p9zXyH4i8R6p4q1SW/1S6eWWRshCflT2AqbxtrM2v8AjDVtQuXJaS4cKCc7VzkD8q50UAFFH1ooAK3PDHhLW/Fmoi00mxluGLAO4X5UGeSSa9C+FXwN1Pxncw6rrETWmiqwdVcYacj0H9a+ytH0XTvD+nRafptrHb20ShVRB2oA+f8AwR+zbpemSxz6/dtfSrz5Sjaufr1r27R/D2k6BAsOnWEECKoXKoMnHqev61p0UAFFFFABRRK6xRPI7BUUFmY9AAOTQByXjv4geH/A2mPcaveRrcMv7u3VgZHOOOBXyD45+IOtfETXRd3jMsO7bBboSEjUHpivjvx1rE2veNdWv7hizS3DlQf4VzkD8q5ugAoopVVkV2VSQv3iBnA65oASjrz3rV8P+G9X8VXyWWjWMl1KxGduNo9ya+iPCf7MusM0V1r92lpC2C0UfLH2570AeKfDzwTeeN/FNpZwRsLeOQPO46IoPOa+8dJ0230jTbbT7VBFbW8YjRFAUYAqhovh3SfD1stvpthDboihQUQBiP9o9606ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoopskkaRs7soRRksxwAPWgDO1bXtK0O3aXU7+3t0Vcne4B/IfmK+cPHv7SN7ctPY+FUENvkq1y4+Zz6gEcfjXIfE/4t6n4z1S4trG4kh0eI7I4kJG8A/ePXPPvXmNAGNq2rahrWoTX2o3MtzczNueSRssTVOigAz68V6t8NPgf4m8c3Mcs1tLp+mcNJeSpjI/2QeTQB5HBBJczxQQoXkkYIqjqSTgYr7s8FeHLbwr4WsdKtIgghjG84wWfGSTXQ6d4b0jStPgsoLC3WKJQuTHlie+fU1uUAFFFFABRRQAUhAIIPSlqK7uIbO2luLiRYoYkLu7HAUAYJNAHy3+0X4V0DRNZ0zUNMSKK6vlka4ijGBuGMH8a8Br1r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AM/WLS4vtHvLa0uGtriWJljmXqjEcGvlvxp+y54gS4muNInjvIZDkeW+1xz6E19tUUAfj14n+H3iTwldtbarpVxCzEjeIztP0bGK425s7m0lMVzbzQyA4ZZIyrA+4r9p7jTbG7bfdWNpM396SFGP5kVxGv8Awf8ABnidWGoaFAXY5MkeVP5CgD8wNK1bUNEvY7zTrqS2uI2ykkZwa+ovh7+1jNC8dl4ogPlbsefu+7z0IPevR9e/Ze8DX0UjaYLmxnwdqxyZT8Qa+TfiH8ENf8ABM804tpbiwGT5qplgPfHStIVZQfNEylFSVmfp1o2u6b4g0yHUNNvIp7aZAyuGB/z0rQr4U+CPxm1Twtqdvp15Pvs52EXkyNwmeMg/jX3Tp93Hf2EN3EwZJkV1YHqCM5rdJNXicjTTszVooorMzCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACvP/iB8LNG8d6a8dxCsd0o/dyR8EH6iuw8V+I7fwr4fur+7uYrcxoTE0uQpcDjgV8Y/EP8AaP1vXL6aLTZBb2gbC+W5yR9enNAGV44+CHjPwhqcsUel3F1aqTslgTeMflXm02nahaSbJ7O6hf8AujKn+dfXfw4/aWsdUmisPFK+RIx2rcgnYfoT0r26w1bRdZs98V7Y3cLDr5qOP5GgD867S31PU51tbS3uriZjwiQsTX0v8Nf2YNT1V4bzxfMbWDglI8b/w54r2i48MeFPAVnf6zaW1tb3BiZhJCAuW5xxX56fFD9pPxJrepXEOlyra2YZlj8uQkgA/X1oA/TXQ/DukaBaJb6bYwwKg67PmPPckVq1+c+nfHnx1ptxHI2tT3MefmjmYsG/A19jfs+/G0fELTE0zVY/L1S1iDEk483P8Q7d6APa6KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAIbiOOaJ45kDxuNrKwyCD2r5v+I37Nlnq80t94bfy7ljl7bOAD7V9Mk02gD4D1f4M+NNHmKvp0k654NvGzjH5VzCeEfEtxMIo9E1R5M4CrbPk/Sv0xooA/Pvw38DPHfiW5SOPSprVC21pJ0aPA/Cvp/wCFf7Onh7wcsV7fIL6/UgkOMJnp0r2uigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//Z";
+
+        // دالة لجلب البيانات سحابياً من Google Sheets عند بدء التشغيل
+        async function fetchCloudData() {
+            if (!GOOGLE_SCRIPT_URL) return;
+            try {
+                // جلب بيانات الطلاب
+                const resStudents = await fetch(`${GOOGLE_SCRIPT_URL}?action=getStudents`);
+                const dataStudents = await resStudents.json();
+                if (dataStudents && dataStudents.length > 1) {
+                    studentsDatabase = [];
+                    for (let i = 1; i < dataStudents.length; i++) {
+                        const row = dataStudents[i];
+                        if (row[1]) {
+                            studentsDatabase.push({ name: String(row[1]).trim(), grade: String(row[2] || "").trim() });
+                        }
+                    }
+                    updateStudentsDatalist();
+                }
+
+                // جلب سجلات الاستئذان
+                const resPerms = await fetch(`${GOOGLE_SCRIPT_URL}?action=getPermissions`);
+                const dataPerms = await resPerms.json();
+                if (dataPerms && dataPerms.length > 1) {
+                    requestsRecords = [];
+                    for (let i = 1; i < dataPerms.length; i++) {
+                        const row = dataPerms[i];
+                        if (row[1]) {
+                            requestsRecords.unshift({
+                                id: row[0] || Date.now(),
+                                studentName: row[1],
+                                studentGrade: row[2],
+                                leaveReason: row[3],
+                                requestDate: row[4],
+                                requestTime: row[5],
+                                approvingAdmin: row[6]
+                            });
+                        }
+                    }
+                    if (document.getElementById("tab-records") && !document.getElementById("tab-records").classList.contains("hidden")) {
+                        renderRecords();
+                    }
+                }
+            } catch (err) {
+                console.log("يعمل النظام حالياً بالتخزين المحلي لعدم توفر الاتصال السحابي أو الرابط:", err);
+            }
+        }
+
+        function updateAppLogoDisplays() {
+            const loginContainer = document.getElementById("loginLogoContainer");
+            const headerContainer = document.getElementById("headerLogoContainer");
+
+            if (customSchoolLogo) {
+                const imgHtml = `<img src="${customSchoolLogo}" alt="Logo" class="w-full h-full object-contain p-1">`;
+                if (loginContainer) loginContainer.innerHTML = imgHtml;
+                if (headerContainer) headerContainer.innerHTML = imgHtml;
+            } else {
+                const defaultIcon = `<i class="fa-solid fa-graduation-cap text-4xl"></i>`;
+                const headerDefaultIcon = `<i class="fa-solid fa-graduation-cap text-lg"></i>`;
+                
+                if (loginContainer) loginContainer.innerHTML = defaultIcon;
+                if (headerContainer) headerContainer.innerHTML = headerDefaultIcon;
+            }
+        }
+
+        function renderLoginUsersList() {
+            const select = document.getElementById("loginUser");
+            select.innerHTML = '<option value="">اختر اسم المستخدم...</option>';
+            Object.keys(adminsPasswords).forEach(user => {
+                const opt = document.createElement("option");
+                opt.value = user;
+                opt.textContent = user === "Admin" ? "المسؤول (Admin)" : user;
+                select.appendChild(opt);
+            });
+        }
+
+        // Real-time Clock & Automatic Live Date/Time Population
+        function startLiveClock() {
+            function updateClock() {
+                const now = new Date();
+                const dateOptions = { year: 'numeric', month: 'numeric', day: 'numeric' };
+                const fullOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+
+                const formattedFull = now.toLocaleDateString('ar-SA', fullOptions);
+                const clockEl = document.getElementById("liveClockDisplay");
+                if (clockEl) {
+                    clockEl.textContent = formattedFull;
+                }
+
+                // Automatically populate inputs live
+                const dateInput = document.getElementById("requestDate");
+                const timeInput = document.getElementById("requestTime");
+                if (dateInput) {
+                    dateInput.value = now.toLocaleDateString('ar-SA', dateOptions);
+                }
+                if (timeInput) {
+                    timeInput.value = now.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', hour12: true });
+                }
+            }
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById("loginUser").value;
+            const pass = document.getElementById("loginPass").value;
+            const errDiv = document.getElementById("loginError");
+
+            if (adminsPasswords[user] && adminsPasswords[user] === pass) {
+                currentUser = user;
+                localStorage.setItem("current_user", currentUser);
+                showDashboard();
+            } else {
+                errDiv.textContent = "اسم المستخدم أو كلمة المرور غير صحيحة!";
+                errDiv.classList.remove("hidden");
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem("current_user");
+            document.getElementById("loginPass").value = "";
+            document.getElementById("loginUser").value = "";
+            showLogin();
+        }
+
+        function showLogin() {
+            renderLoginUsersList();
+            updateAppLogoDisplays();
+            document.getElementById("loginView").classList.remove("hidden");
+            document.getElementById("dashboardView").classList.add("hidden");
+        }
+
+        function showDashboard() {
+            document.getElementById("loginView").classList.add("hidden");
+            document.getElementById("dashboardView").classList.remove("hidden");
+            document.getElementById("currentUserDisplay").textContent = `المستخدم: ${currentUser}`;
+            
+            // Auto-lock approving admin
+            document.getElementById("approvingAdmin").value = currentUser;
+
+            if (currentUser === "Admin") {
+                document.getElementById("adminNavBtn").classList.remove("hidden");
+            } else {
+                document.getElementById("adminNavBtn").classList.add("hidden");
+            }
+
+            updateAppLogoDisplays();
+            updateStudentsDatalist();
+            renderRecords();
+            renderAdminsSettings();
+            startLiveClock();
+            fetchCloudData(); // جلب البيانات السحابية فور الدخول
+        }
+
+        function switchTab(tabId) {
+            document.getElementById("tab-newRequest").classList.add("hidden");
+            document.getElementById("tab-records").classList.add("hidden");
+            document.getElementById("tabBtn-newRequest").className = "px-4 py-2 rounded-xl font-bold text-sm bg-white text-slate-600 hover:bg-slate-100 transition";
+            document.getElementById("tabBtn-records").className = "px-4 py-2 rounded-xl font-bold text-sm bg-white text-slate-600 hover:bg-slate-100 transition";
+
+            document.getElementById(`tab-${tabId}`).classList.remove("hidden");
+            document.getElementById(`tabBtn-${tabId}`).className = "px-4 py-2 rounded-xl font-bold text-sm bg-teal-700 text-white shadow-sm transition";
+
+            if (tabId === 'records') {
+                fetchCloudData();
+                renderRecords();
+            }
+        }
+
+        function handleExcelUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                
+                studentsDatabase = [];
+                for (let i = 1; i < json.length; i++) {
+                    const row = json[i];
+                    if (row && row.length > 0) {
+                        const name = row[0] ? String(row[0]).trim() : "";
+                        const grade = row[1] ? String(row[1]).trim() : "";
+                        if (name) {
+                            studentsDatabase.push({name, grade});
+                        }
+                    }
+                }
+                localStorage.setItem("students_db", JSON.stringify(studentsDatabase));
+                updateStudentsDatalist();
+                alert(`تم استيراد ${studentsDatabase.length} طالب بنجاح!`);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function updateStudentsDatalist() {
+            const list = document.getElementById("studentsList");
+            list.innerHTML = "";
+            studentsDatabase.forEach(st => {
+                const opt = document.createElement("option");
+                opt.value = st.name;
+                opt.textContent = st.grade ? `الصف: ${st.grade}` : '';
+                list.appendChild(opt);
+            });
+        }
+
+        function onStudentNameInput(val) {
+            const found = studentsDatabase.find(st => st.name === val.trim());
+            if (found && found.grade) {
+                document.getElementById("studentGrade").value = found.grade;
+            }
+        }
+
+        function openPrintWindow(contentHtml, pageSizeCss) {
+            const printWin = window.open('', '_blank', 'width=900,height=700');
+            if (!printWin) {
+                alert("يرجى السماح بالنوافذ المنبثقة للطباعة المباشرة.");
+                return;
+            }
+            printWin.document.write(`
+                <!DOCTYPE html>
+                <html lang="ar" dir="rtl">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>طباعة</title>
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+                    <style>
+                        @page { ${pageSizeCss} margin: 0; }
+                        body { margin: 0; padding: 0; background: white; font-family: 'Cairo', sans-serif; }
+                    </style>
+                </head>
+                <body>
+                    ${contentHtml}
+                    <script>
+                        window.onload = function() {
+                            window.focus();
+                            window.print();
+                            setTimeout(function(){ window.close(); }, 500);
+                        }
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWin.document.close();
+        }
+
+        async function submitRequest(e) {
+            e.preventDefault();
+            const now = new Date();
+            const record = {
+                id: Date.now(),
+                requestDate: document.getElementById("requestDate").value || now.toLocaleDateString('ar-SA'),
+                requestTime: document.getElementById("requestTime").value || now.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', hour12: true }),
+                studentName: document.getElementById("studentName").value.trim(),
+                studentGrade: document.getElementById("studentGrade").value.trim(),
+                leaveReason: document.getElementById("leaveReason").value,
+                approvingAdmin: document.getElementById("approvingAdmin").value
+            };
+
+            requestsRecords.unshift(record);
+            localStorage.setItem("requests_records", JSON.stringify(requestsRecords));
+            
+            // إرسال البيانات بشكل آمن إلى Google Sheets سحابياً
+            if (GOOGLE_SCRIPT_URL) {
+                try {
+                    await fetch(GOOGLE_SCRIPT_URL, {
+                        method: "POST",
+                        body: JSON.stringify({
+                            action: "addPermission",
+                            data: {
+                                id: record.id,
+                                studentName: record.studentName,
+                                class: record.studentGrade,
+                                reason: record.leaveReason,
+                                date: record.requestDate,
+                                time: record.requestTime,
+                                approvedBy: record.approvingAdmin
+                            }
+                        })
+                    });
+                } catch (err) {
+                    console.log("فشل الحفظ السحابي المؤقت، تم الحفظ محلياً:", err);
+                }
+            }
+
+            // Execute Guaranteed Popup Print
+            printA6Card(record);
+
+            document.getElementById("requestForm").reset();
+            document.getElementById("approvingAdmin").value = currentUser;
+        }
+
+        function printA6Card(rec) {
+            const dateStr = rec.requestDate || (rec.date ? rec.date.split(' ')[0] : '');
+            const timeStr = rec.requestTime || (rec.date ? rec.date.split(' ').slice(1).join(' ') : '');
+
+            const logoHeaderHtml = customSchoolLogo 
+                ? `<div style="text-align: center; margin-bottom: 4px;"><img src="${customSchoolLogo}" style="max-height: 48px; max-width: 100px; object-fit: contain;"></div>`
+                : `<div style="font-size: 24px; color: #0f766e; margin-bottom: 2px; text-align: center;"><i class="fa-solid fa-graduation-cap"></i></div>`;
+
+            const cardHTML = `
+                <div style="width: 10.5cm; height: 14.8cm; margin: 0 auto; padding: 6mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; direction: rtl; background: #ffffff; font-family: 'Cairo', sans-serif; border: 2px solid #0f766e; border-radius: 8px; position: relative;">
+                    <div style="border: 1px solid #cbd5e1; height: 100%; width: 100%; box-sizing: border-box; padding: 5mm; display: flex; flex-direction: column; justify-content: space-between; border-radius: 6px; background: #fafafa;">
+                        
+                        <div style="text-align: center; border-bottom: 2px solid #0f766e; padding-bottom: 6px;">
+                            ${logoHeaderHtml}
+                            <div style="font-size: 14px; font-weight: 900; color: #0f766e;">ثانوية المملكة العالمية</div>
+                            <div style="font-size: 11px; font-weight: 700; color: #334155; margin-top: 2px;">بطاقة استئذان خروج طالب</div>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: #1e293b;">
+                            <div style="background: #ffffff; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <span style="font-weight: bold; color: #0f766e; display: inline-block; width: 22%;">اسم الطالب:</span>
+                                <span style="font-weight: 700;">${rec.studentName}</span>
+                            </div>
+                            <div style="background: #ffffff; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <span style="font-weight: bold; color: #0f766e; display: inline-block; width: 22%;">الصف/الفصل:</span>
+                                <span style="font-weight: 700;">${rec.studentGrade}</span>
+                            </div>
+                            <div style="background: #ffffff; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <span style="font-weight: bold; color: #0f766e; display: inline-block; width: 22%;">سبب الخروج:</span>
+                                <span style="font-weight: 700;">${rec.leaveReason}</span>
+                            </div>
+                            <div style="display: flex; gap: 6px;">
+                                <div style="flex: 1; background: #ffffff; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center;">
+                                    <div style="font-size: 10px; color: #64748b;">التاريخ</div>
+                                    <div style="font-weight: 700; font-size: 11px;">${dateStr}</div>
+                                </div>
+                                <div style="flex: 1; background: #ffffff; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center;">
+                                    <div style="font-size: 10px; color: #64748b;">وقت الاستئذان</div>
+                                    <div style="font-weight: 700; font-size: 11px;">${timeStr}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="border-top: 1px dashed #cbd5e1; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                            <div>
+                                <span style="color: #64748b;">المسؤول المعتمد:</span> 
+                                <span style="font-weight: bold; color: #0f766e;">${rec.approvingAdmin}</span>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 9px; color: #94a3b8;">ختم المدرسة</div>
+                                <div style="width: 50px; height: 20px; border-bottom: 1px solid #cbd5e1; margin: 0 auto;"></div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            `;
+            openPrintWindow(cardHTML, "size: A6 portrait;");
+        }
+
+        function renderRecords() {
+            const tbody = document.getElementById("recordsTableBody");
+            tbody.innerHTML = "";
+            if (requestsRecords.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center p-6 text-slate-400">لا توجد سجلات استئذان حتى الآن</td></tr>`;
+                return;
+            }
+            requestsRecords.forEach((rec, idx) => {
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="p-3 font-medium text-slate-600">${rec.requestDate || (rec.date ? rec.date.split(' ')[0] : '')}</td>
+                    <td class="p-3 text-slate-600">${rec.requestTime || (rec.date ? rec.date.split(' ').slice(1).join(' ') : '')}</td>
+                    <td class="p-3 font-bold text-slate-800">${rec.studentName}</td>
+                    <td class="p-3 text-slate-600">${rec.studentGrade || rec.class}</td>
+                    <td class="p-3 text-slate-600">${rec.leaveReason || rec.reason}</td>
+                    <td class="p-3 font-semibold text-teal-700">${rec.approvingAdmin || rec.approvedBy}</td>
+                    <td class="p-3 text-center space-x-1 space-x-reverse">
+                        <button onclick='printA6Card(${JSON.stringify(rec)})' class="px-2.5 py-1 bg-teal-50 text-teal-700 hover:bg-teal-100 rounded-lg text-xs font-bold transition" title="إعادة طباعة البطاقة">
+                            <i class="fa-solid fa-print"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function toggleAdminModal() {
+            const modal = document.getElementById("adminModal");
+            modal.classList.toggle("hidden");
+            if (!modal.classList.contains("hidden")) {
+                renderAdminsSettings();
+            }
+        }
+
+        function renderAdminsSettings() {
+            const container = document.getElementById("adminsListContainer");
+            container.innerHTML = "";
+            Object.keys(adminsPasswords).forEach(user => {
+                if (user === "Admin") return; // Admin الرئيسي له خانة مخصصة
+                const div = document.createElement("div");
+                div.className = "flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200";
+                div.innerHTML = `
+                    <input type="text" value="${user}" id="admin_name_${user}" class="flex-grow px-3 py-1.5 border rounded-lg bg-white text-sm" placeholder="اسم الإداري">
+                    <input type="text" value="${adminsPasswords[user]}" id="admin_pass_${user}" class="w-28 px-3 py-1.5 border rounded-lg bg-white text-sm" placeholder="كلمة المرور">
+                    <button onclick="saveAdminChanges('${user}')" class="px-3 py-1.5 bg-teal-700 text-white rounded-lg text-xs font-bold hover:bg-teal-800">تحديث</button>
+                    <button onclick="deleteAdminUser('${user}')" class="px-2 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs" title="حذف">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function addNewAdminRow() {
+            const name = prompt("أدخل اسم الإداري الجديد:");
+            if (!name) return;
+            const pass = prompt("أدخل كلمة المرور للإداري الجديد:");
+            if (!pass) return;
+            adminsPasswords[name] = pass;
+            localStorage.setItem("admins_passwords", JSON.stringify(adminsPasswords));
+            renderAdminsSettings();
+            renderLoginUsersList();
+            alert("تم إضافة الإداري بنجاح!");
+        }
+
+        function saveAdminChanges(oldName) {
+            const newName = document.getElementById(`admin_name_${oldName}`).value.trim();
+            const newPass = document.getElementById(`admin_pass_${oldName}`).value.trim();
+            if (!newName || !newPass) {
+                alert("الرجاء إدخال الاسم وكلمة المرور!");
+                return;
+            }
+            if (newName !== oldName) {
+                delete adminsPasswords[oldName];
+            }
+            adminsPasswords[newName] = newPass;
+            localStorage.setItem("admins_passwords", JSON.stringify(adminsPasswords));
+            renderAdminsSettings();
+            renderLoginUsersList();
+            alert("تم تحديث بيانات الإداري بنجاح!");
+        }
+
+        function deleteAdminUser(username) {
+            if (confirm(`هل أنت متأكد من حذف الإداري (${username})؟`)) {
+                delete adminsPasswords[username];
+                localStorage.setItem("admins_passwords", JSON.stringify(adminsPasswords));
+                renderAdminsSettings();
+                renderLoginUsersList();
+            }
+        }
+
+        function updateAdminPassword() {
+            const newPass = document.getElementById("newAdminPass").value.trim();
+            if (!newPass) {
+                alert("الرجاء إدخال كلمة المرور الجديدة للمسؤول!");
+                return;
+            }
+            adminsPasswords["Admin"] = newPass;
+            localStorage.setItem("admins_passwords", JSON.stringify(adminsPasswords));
+            document.getElementById("newAdminPass").value = "";
+            alert("تم تحديث كلمة مرور المسؤول الرئيسي بنجاح!");
+        }
+
+        function exportToExcel() {
+            const dataToExport = requestsRecords.map(r => ({
+                "التاريخ": r.requestDate || '',
+                "الوقت": r.requestTime || '',
+                "اسم الطالب": r.studentName || '',
+                "الصف": r.studentGrade || r.class || '',
+                "سبب الاستئذان": r.leaveReason || r.reason || '',
+                "المسؤول المعتمد": r.approvingAdmin || r.approvedBy || ''
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "سجل الاستئذان");
+            XLSX.writeFile(workbook, "سجل_استئذان_الطلاب.xlsx");
+        }
+
+        function printFullReport() {
+            let rowsHtml = "";
+            requestsRecords.forEach(r => {
+                rowsHtml += `
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1;">${r.requestDate || ''}</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1;">${r.requestTime || ''}</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">${r.studentName}</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1;">${r.studentGrade || r.class || ''}</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1;">${r.leaveReason || r.reason || ''}</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1;">${r.approvingAdmin || r.approvedBy || ''}</td>
+                    </tr>
+                `;
+            });
+
+            const reportHtml = `
+                <div style="padding: 15mm; direction: rtl; font-family: 'Cairo', sans-serif;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <h2 style="margin: 0; font-size: 18px; color: #0f766e;">ثانوية المملكة العالمية</h2>
+                        <h3 style="margin: 5px 0 0 0; font-size: 14px; color: #334155;">تقرير سجل استئذان الطلاب الشامل</h3>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: right;">
+                        <thead>
+                            <tr style="background: #f1f5f9; color: #334155;">
+                                <th style="padding: 8px; border: 1px solid #cbd5e1;">التاريخ</th>
+                                <th style="padding: 8px; border: 1px solid #cbd5e1;">الوقت</th>
+                                <th style="padding: 8px; border: 1px solid #cbd5e1;">اسم الطالب</th>
+                                <th style="padding: 8px; border: 1px solid #cbd5e1;">الصف</th>
+                                <th style="padding: 8px; border: 1px solid #cbd5e1;">السبب</th>
+                                <th style="padding: 8px; border: 1px solid #cbd5e1;">المعتمد</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            openPrintWindow(reportHtml, "size: A4 portrait;");
+        }
+
+        window.onload = function() {
+            renderLoginUsersList();
+            updateAppLogoDisplays();
+        };
+    </script>
+</body>
+</html>
